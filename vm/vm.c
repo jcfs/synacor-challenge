@@ -21,58 +21,66 @@ uint16_t mem[65536];
 uint16_t stack[65536];
 uint16_t reg[8];
 uint16_t pc;
-int sp = 0;
+uint16_t * sp = stack;
+int program_size;
 
 // functions definition
 // stop execution and terminate the program
-void halt(uint16_t a, uint16_t b, uint16_t c);
+int halt(uint16_t a, uint16_t b, uint16_t c);
 //set register <a> to the value of <b>
-void set(uint16_t a, uint16_t b, uint16_t c);
+int set(uint16_t a, uint16_t b, uint16_t c);
 //push <a> onto the stack
-void push(uint16_t a, uint16_t b, uint16_t c);
+int push(uint16_t a, uint16_t b, uint16_t c);
 //remove the top element from the stack and write it into <a>; empty stack = error
-void pop(uint16_t a, uint16_t b, uint16_t c);
+int pop(uint16_t a, uint16_t b, uint16_t c);
 //set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
-void eq(uint16_t a, uint16_t b, uint16_t c);
+int eq(uint16_t a, uint16_t b, uint16_t c);
 //set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
-void gt(uint16_t a, uint16_t b, uint16_t c);
+int gt(uint16_t a, uint16_t b, uint16_t c);
 //jump to <a>
-void jmp(uint16_t a, uint16_t b, uint16_t c);
+int jmp(uint16_t a, uint16_t b, uint16_t c);
 //if <a> is nonzero, jump to <b>
-void jt(uint16_t a, uint16_t b, uint16_t c);
+int jt(uint16_t a, uint16_t b, uint16_t c);
 //if <a> is zero, jump to <b>
-void jf(uint16_t a, uint16_t b, uint16_t c);
+int jf(uint16_t a, uint16_t b, uint16_t c);
 //assign into <a> the sum of <b> and <c> (modulo 32768)
-void add(uint16_t a, uint16_t b, uint16_t c);
+int add(uint16_t a, uint16_t b, uint16_t c);
 //store into <a> the product of <b> and <c> (modulo 32768)
-void mult(uint16_t a, uint16_t b, uint16_t c);
+int mult(uint16_t a, uint16_t b, uint16_t c);
 //store into <a> the remainder of <b> divided by <c>
-void mod(uint16_t a, uint16_t b, uint16_t c);
+int mod(uint16_t a, uint16_t b, uint16_t c);
 //stores into <a> the bitwise and of <b> and <c>
-void and(uint16_t a, uint16_t b, uint16_t c);
+int and(uint16_t a, uint16_t b, uint16_t c);
 //stores into <a> the bitwise or of <b> and <c>
-void or(uint16_t a, uint16_t b, uint16_t c);
+int or(uint16_t a, uint16_t b, uint16_t c);
 //stores 15-bit bitwise inverse of <b> in <a>
-void not(uint16_t a, uint16_t b, uint16_t c);
+int not(uint16_t a, uint16_t b, uint16_t c);
 //read memory at address <b> and write it to <a>
-void rmem(uint16_t a, uint16_t b, uint16_t c);
+int rmem(uint16_t a, uint16_t b, uint16_t c);
 //write the value from <b> into memory at address <a>
-void wmem(uint16_t a, uint16_t b, uint16_t c);
+int wmem(uint16_t a, uint16_t b, uint16_t c);
 //write the address of the next instruction to the stack and jump to <a>
-void call(uint16_t a, uint16_t b, uint16_t c);
+int call(uint16_t a, uint16_t b, uint16_t c);
 //remove the top element from the stack and jump to it; empty stack = halt
-void ret(uint16_t a, uint16_t b, uint16_t c);
+int ret(uint16_t a, uint16_t b, uint16_t c);
 //write the character represented by ascii code <a> to the terminal
-void out(uint16_t a, uint16_t b, uint16_t c);
+int out(uint16_t a, uint16_t b, uint16_t c);
 //read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts
 //it will continue until a newline is encountered; this means that you can safely read whole the keyboard and 
 //trust that they will be fully read
-void in(uint16_t a, uint16_t b, uint16_t c);
+int in(uint16_t a, uint16_t b, uint16_t c);
 // no operation
-void noop(uint16_t a, uint16_t b, uint16_t c);
+int noop(uint16_t a, uint16_t b, uint16_t c);
 
-void (*opcode_function[22])() = {
-  &halt, &set, &push,
+char * opcode_names[22] = {
+  "halt", "set", "push", "pop", "eq", 
+  "gt", "jmp", "jt", "jf", "add", "mult", 
+  "mod","and", "or", "not", "rmem", 
+  "wmem", "call", "ret", "out", "in", "noop" 
+};
+
+int (*opcode_function[22])() = {
+  (int *)&halt, (int *)&set, (int *)&push,
   (int *)&pop, (int *) &eq, (int *) &gt,
   (int *)&jmp, (int *) &jt, (int *) &jf,
   (int *)&add, (int *) &mult, (int *) &mod,(int*) &and,
@@ -81,114 +89,135 @@ void (*opcode_function[22])() = {
   (int *)&out, (int *) &in, (int *) &noop
 };
 
-void halt(uint16_t a, uint16_t b, uint16_t c) {
+uint8_t opcode_pc[22] = {
+  1, 3, 2, 
+  2, 4, 4,
+  2, 3, 3,
+  4, 4, 4,
+  4, 4, 3,
+  3, 3, 2,
+  1, 2, 2, 1
+};
+
+int halt(uint16_t a, uint16_t b, uint16_t c) {
   exit(0);
 }
 
-void set(uint16_t a, uint16_t b, uint16_t c) {
+int set(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, b);
-  pc += 3;
+  return 1;
 }
 
-void push(uint16_t a, uint16_t b, uint16_t c) {
-  stack[sp++] = a;
-  pc += 2;
+int push(uint16_t a, uint16_t b, uint16_t c) {
+  *sp++ = a;
+  return 1;
 }
 
-void pop(uint16_t a, uint16_t b, uint16_t c) {
+int pop(uint16_t a, uint16_t b, uint16_t c) {
   sp--;
-  SET_REG(pc + 1, stack[sp]);
-  pc += 2;
+  SET_REG(pc + 1, *sp);
+  return 1;
 }
 
-void eq(uint16_t a, uint16_t b, uint16_t c) {
+int eq(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, b == c);
-  pc += 4;
+  return 1;
 }
 
-void gt(uint16_t a, uint16_t b, uint16_t c) {
+int gt(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, b > c);
-  pc += 4;
+  return 1;
 }
 
-void jmp(uint16_t a, uint16_t b, uint16_t c) {
+int jmp(uint16_t a, uint16_t b, uint16_t c) {
   pc = a;
+  return 0;
 }
 
-void jt(uint16_t a, uint16_t b, uint16_t c) {
-  pc = a ? b : pc + 3;
+int jt(uint16_t a, uint16_t b, uint16_t c) {
+  if (a) {
+    pc = b;
+    return 0;
+  } else {
+    return 1;
+  }
 }
 
-void jf(uint16_t a, uint16_t b, uint16_t c) {
-  pc = !a ? b : pc + 3;
+int jf(uint16_t a, uint16_t b, uint16_t c) {
+  if (!a) {
+    pc = b;
+    return 0;
+  } else {
+    return 1;
+  }
 }
 
-void add(uint16_t a, uint16_t b, uint16_t c) {
+int add(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b + c) % 32768);
-  pc += 4;
+  return 1;
 }
 
-void mult(uint16_t a, uint16_t b, uint16_t c) {
+int mult(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b * c) % 32768);
-  pc += 4;
+  return 1;
 }
 
-void mod(uint16_t a, uint16_t b, uint16_t c) {
+int mod(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b % c));
-  pc += 4;
+  return 1;
 }
 
-void and(uint16_t a, uint16_t b, uint16_t c) {
+int and(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b & c));
-  pc += 4;
+  return 1;
 }
 
-void or(uint16_t a, uint16_t b, uint16_t c) {
+int or(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b | c));
-  pc += 4;
+  return 1;
 }
 
-void not(uint16_t a, uint16_t b, uint16_t c) {
+int not(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, b^0x7FFF);
-  pc += 3;
+  return 1;
 }
 
-void rmem(uint16_t a, uint16_t b, uint16_t c) {
+int rmem(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, mem[b]);
-  pc += 3;
+  return 1;
 }
 
-void wmem(uint16_t a, uint16_t b, uint16_t c) {
+int wmem(uint16_t a, uint16_t b, uint16_t c) {
   mem[a] = b;
-  pc += 3;
+  return 1;
 }
 
-void call(uint16_t a, uint16_t b, uint16_t c) {
-  stack[sp++] = pc + 2;
+int call(uint16_t a, uint16_t b, uint16_t c) {
+  *sp++ = pc + 2;
   pc = a;
+  return 0;
 }
 
-void ret(uint16_t a, uint16_t b, uint16_t c) {
-  if (!sp) halt(a, b, c);
+int ret(uint16_t a, uint16_t b, uint16_t c) {
+  if (sp == stack) halt(a, b, c);
   sp--;
-  pc = stack[sp];
+  pc = *sp;
+  return 0;
 }
 
-void out(uint16_t a, uint16_t b, uint16_t c) {
+int out(uint16_t a, uint16_t b, uint16_t c) {
   putchar(a);
-  pc += 2;
+  return 1;
 }
 
-void in(uint16_t a, uint16_t b, uint16_t c) {
+int in(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, getchar());
-  pc += 2;
+  return 1;
 }
 
-void noop(uint16_t a, uint16_t b, uint16_t c) {
-  pc++;
+int noop(uint16_t a, uint16_t b, uint16_t c) {
+  return 1;
 }
-
-
 
 // load the program to the vm memory
 void load(char * file) {
@@ -205,6 +234,7 @@ void load(char * file) {
     offset++;
   }
 
+  program_size = offset;
   printf("Loaded program with %d bytes\n", offset); 
 
   close(fd);
@@ -212,22 +242,83 @@ void load(char * file) {
 
 // runs the program. return 0 for successfull run
 // and != 0 for error
+int debug = 0;
+int debug_s(int opcode) {
+
+  printf("%5s ", opcode_names[opcode]);
+  uint8_t arg = opcode_pc[opcode];
+
+  if (arg>=2) {
+    if (mem[pc+1] >= 32768) {
+      printf("%c ", 'A' + mem[pc+1]-32768);
+    } else {
+      if (opcode == 19) 
+        printf("%c ", mem[pc+1]);
+      else 
+        printf("%x ", mem[pc+1]);
+    }
+  }
+
+  if (arg>=3) {
+    if (mem[pc+2] >= 32768) {
+      printf("%c ", 'A' + mem[pc+2]-32768);
+    } else {
+      printf("%x ", mem[pc+2]);
+    }
+  }
+
+  if (arg >= 4){
+    if (mem[pc+3] >= 32768) {
+      printf("%c ", 'A' + mem[pc+3]-32768);
+    } else {
+      printf("%x ", mem[pc+3]);
+    }
+  }
+
+  if (opcode == 17 || opcode == 18) printf("\n");
+
+}
+
+void disassemble() {
+  printf("Dissassemble\n");
+  while(pc <  program_size) {
+    printf("0x%04x: ", pc);
+    if (mem[pc] < 22) {
+      debug_s(mem[pc]);
+      pc += opcode_pc[mem[pc]];
+    } else {
+      pc++;
+    }
+    printf("\n");
+  }
+}
+
 int run() {
   while(1) {
     uint16_t opcode = mem[pc];
-    (*opcode_function[opcode])(A,B,C);
+
+    if (debug) {
+      debug_s(opcode);
+    }    
+
+    pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
   }
 }
 
 int main(int argc, char **argv) {
-  if (argc != 2) {
-    printf("usage: %s <program_to_load>\n", argv[0]);
+  uint8_t run_p;
+  uint8_t disas_p;
+
+  if (argc != 3) {
+    printf("usage: %s [option] <program_to_load>\nOptions:\n  -r: run porgram\n  -s: dissassemble program\n", argv[0]);
     exit(1);
   }
 
-  //load the program
-  load(argv[1]);
+  load(argv[2]);
 
-  //run the program
-  run();
+  if (!strncmp(argv[1], "-r", 2)) {
+    run();
+  } else if (!strncmp(argv[1], "-s", 2)) {
+    disassemble();
+  }
 }
