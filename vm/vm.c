@@ -6,72 +6,27 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#define FILE_CHUNK 65536
-#define STACK_CHUNK 65536
+#include "vm.h"
 
-#define REG(x) (mem[x]-32768)
-#define ARG(x) (mem[x] <= 32767 ? mem[x] : reg[mem[x]-32768])
+#define MEM_SIZE      65536
+#define STACK_SIZE    65536
+
+#define REG(x)        (mem[x]-32768)
+#define ARG(x)        (mem[x] <= 32767 ? mem[x] : reg[mem[x]-32768])
 #define SET_REG(x, y) (reg[mem[x]-32768] = y)
 
-#define A ARG(pc+1)
-#define B ARG(pc+2)
-#define C ARG(pc+3)
+#define A             ARG(pc+1)
+#define B             ARG(pc+2)
+#define C             ARG(pc+3)
 
-uint16_t mem[65536];
-uint16_t stack[65536];
+uint16_t mem[MEM_SIZE];
+uint16_t stack[STACK_SIZE];
 uint16_t reg[8];
 uint16_t pc;
 uint16_t * sp = stack;
-int program_size;
+uint16_t program_size;
 
-// functions definition
-// stop execution and terminate the program
-int halt(uint16_t a, uint16_t b, uint16_t c);
-//set register <a> to the value of <b>
-int set(uint16_t a, uint16_t b, uint16_t c);
-//push <a> onto the stack
-int push(uint16_t a, uint16_t b, uint16_t c);
-//remove the top element from the stack and write it into <a>; empty stack = error
-int pop(uint16_t a, uint16_t b, uint16_t c);
-//set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
-int eq(uint16_t a, uint16_t b, uint16_t c);
-//set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
-int gt(uint16_t a, uint16_t b, uint16_t c);
-//jump to <a>
-int jmp(uint16_t a, uint16_t b, uint16_t c);
-//if <a> is nonzero, jump to <b>
-int jt(uint16_t a, uint16_t b, uint16_t c);
-//if <a> is zero, jump to <b>
-int jf(uint16_t a, uint16_t b, uint16_t c);
-//assign into <a> the sum of <b> and <c> (modulo 32768)
-int add(uint16_t a, uint16_t b, uint16_t c);
-//store into <a> the product of <b> and <c> (modulo 32768)
-int mult(uint16_t a, uint16_t b, uint16_t c);
-//store into <a> the remainder of <b> divided by <c>
-int mod(uint16_t a, uint16_t b, uint16_t c);
-//stores into <a> the bitwise and of <b> and <c>
-int and(uint16_t a, uint16_t b, uint16_t c);
-//stores into <a> the bitwise or of <b> and <c>
-int or(uint16_t a, uint16_t b, uint16_t c);
-//stores 15-bit bitwise inverse of <b> in <a>
-int not(uint16_t a, uint16_t b, uint16_t c);
-//read memory at address <b> and write it to <a>
-int rmem(uint16_t a, uint16_t b, uint16_t c);
-//write the value from <b> into memory at address <a>
-int wmem(uint16_t a, uint16_t b, uint16_t c);
-//write the address of the next instruction to the stack and jump to <a>
-int call(uint16_t a, uint16_t b, uint16_t c);
-//remove the top element from the stack and jump to it; empty stack = halt
-int ret(uint16_t a, uint16_t b, uint16_t c);
-//write the character represented by ascii code <a> to the terminal
-int out(uint16_t a, uint16_t b, uint16_t c);
-//read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts
-//it will continue until a newline is encountered; this means that you can safely read whole the keyboard and 
-//trust that they will be fully read
-int in(uint16_t a, uint16_t b, uint16_t c);
-// no operation
-int noop(uint16_t a, uint16_t b, uint16_t c);
-
+// opcode names order
 char * opcode_names[22] = {
   "halt", "set", "push", "pop", "eq", 
   "gt", "jmp", "jt", "jf", "add", "mult", 
@@ -79,6 +34,7 @@ char * opcode_names[22] = {
   "wmem", "call", "ret", "out", "in", "noop" 
 };
 
+// opcode function pointers
 int (*opcode_function[22])() = {
   (int *)&halt, (int *)&set, (int *)&push,
   (int *)&pop, (int *) &eq, (int *) &gt,
@@ -89,6 +45,7 @@ int (*opcode_function[22])() = {
   (int *)&out, (int *) &in, (int *) &noop
 };
 
+// opcode pc increase array
 uint8_t opcode_pc[22] = {
   1, 3, 2, 
   2, 4, 4,
@@ -99,6 +56,7 @@ uint8_t opcode_pc[22] = {
   1, 2, 2, 1
 };
 
+// opcode function implementations
 int halt(uint16_t a, uint16_t b, uint16_t c) {
   exit(0);
 }
@@ -209,7 +167,6 @@ int out(uint16_t a, uint16_t b, uint16_t c) {
   putchar(a);
   return 1;
 }
-
 int in(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, getchar());
   return 1;
@@ -221,7 +178,6 @@ int noop(uint16_t a, uint16_t b, uint16_t c) {
 
 // load the program to the vm memory
 void load(char * file) {
-  char ch;
   int fd = open(file, O_RDONLY);
 
   if (fd == -1) {
@@ -240,10 +196,7 @@ void load(char * file) {
   close(fd);
 }
 
-// runs the program. return 0 for successfull run
-// and != 0 for error
-int debug = 0;
-int debug_s(int opcode) {
+int print_instruction(int opcode) {
 
   printf("%5s ", opcode_names[opcode]);
   uint8_t arg = opcode_pc[opcode];
@@ -279,36 +232,33 @@ int debug_s(int opcode) {
 
 }
 
+// disasembles the program loaded in memory
+// and outputs it in a readable format
 void disassemble() {
-  printf("Dissassemble\n");
+  printf("Disassembling...\n");
   while(pc <  program_size) {
     printf("0x%04x: ", pc);
     if (mem[pc] < 22) {
-      debug_s(mem[pc]);
+      print_instruction(mem[pc]);
       pc += opcode_pc[mem[pc]];
     } else {
+      printf("0x%04x", mem[pc]);
       pc++;
     }
     printf("\n");
   }
 }
 
+// run the program loaded in memory
 int run() {
   while(1) {
     uint16_t opcode = mem[pc];
-
-    if (debug) {
-      debug_s(opcode);
-    }    
 
     pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
   }
 }
 
 int main(int argc, char **argv) {
-  uint8_t run_p;
-  uint8_t disas_p;
-
   if (argc != 3) {
     printf("usage: %s [option] <program_to_load>\nOptions:\n  -r: run porgram\n  -s: dissassemble program\n", argv[0]);
     exit(1);
