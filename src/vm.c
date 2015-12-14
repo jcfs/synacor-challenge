@@ -158,7 +158,7 @@ int out(uint16_t a, uint16_t b, uint16_t c) {
   return 1;
 }
 int in(uint16_t a, uint16_t b, uint16_t c) {
-  SET_REG(pc + 1, getchar());
+  SET_REG(pc + 1, getchr());
   return 1;
 }
 

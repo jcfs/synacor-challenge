@@ -24,7 +24,7 @@ int run_curses() {
   int score_size = 3;
 
   initscr();
-  //noecho();
+  echo();
   curs_set(FALSE);
   curses_running = 1;
 

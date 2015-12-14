@@ -4,4 +4,6 @@
 // prints the char represented by the argument
 void print(uint16_t);
 
+char getchr();
+
 #endif
