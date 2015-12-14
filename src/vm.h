@@ -1,6 +1,8 @@
 #ifndef VM_H
 #define VM_H
 
+#include <stdint.h>
+
 #define MEM_SIZE      65536
 #define STACK_SIZE    65536
 
@@ -24,6 +26,7 @@ extern uint16_t program_size;
 extern char * opcode_names[];
 extern uint8_t opcode_pc[];
 extern int (*opcode_function[22])();
+extern int run();
 
 // functions definition
 // stop execution and terminate the program
