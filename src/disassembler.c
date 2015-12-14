@@ -121,7 +121,6 @@ int print_instruction(char * buffer, uint16_t addr) {
     }
   }
 
-
   // print the second argument of the instruction
   if (arg >= 3) {
     if (IS_REG(mem[addr+2])) {

@@ -8,15 +8,9 @@
 #include <ncurses.h>
 
 #include "vm.h"
+#include "curses.h"
 #include "disassembler.h"
-
-#define REG(x)        (mem[x]-32768)
-#define ARG(x)        (mem[x] <= 32767 ? mem[x] : reg[mem[x]-32768])
-#define SET_REG(x, y) (reg[mem[x]-32768] = y)
-
-#define A             ARG(pc+1)
-#define B             ARG(pc+2)
-#define C             ARG(pc+3)
+#include "print.h"
 
 uint16_t mem[MEM_SIZE];
 uint16_t stack[STACK_SIZE];
@@ -163,7 +157,7 @@ int ret(uint16_t a, uint16_t b, uint16_t c) {
 }
 
 int out(uint16_t a, uint16_t b, uint16_t c) {
-  putchar(a);
+  print(a);
   return 1;
 }
 int in(uint16_t a, uint16_t b, uint16_t c) {
@@ -190,7 +184,7 @@ void load(char * file) {
   }
 
   program_size = offset;
-  printf("Loaded program with %d bytes\n", offset); 
+  printf("Loaded program with %d bytes\n", offset*sizeof(uint16_t)); 
 
   close(fd);
 }
@@ -202,60 +196,6 @@ int run() {
 
     pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
   }
-}
-
-void draw_borders(WINDOW *screen) {
-  int x, y, i;
-  getmaxyx(screen, y, x);
-
-  mvwprintw(screen, 0, 0, "+");
-
-  mvwprintw(screen, y - 1, 0, "+");
-  mvwprintw(screen, 0, x - 1, "+");
-  mvwprintw(screen, y - 1, x - 1, "+");
-
-  for (i = 1; i < (y - 1); i++) {
-    mvwprintw(screen, i, 0, "|");
-    mvwprintw(screen, i, x - 1, "|");
-    mvwprintw(screen, i, x - 35, "|");
-  }
-
-  for (i = 1; i < (x - 1); i++) {
-    mvwprintw(screen, 0, i, "-");
-    mvwprintw(screen, y - 1, i, "-");
-  }
-
-
-  mvwprintw(screen, 0, x - 35, "+");
-  mvwprintw(screen, y - 1, x - 35, "+");
-}
-
-int run_curses() {
-  int parent_x, parent_y;
-  int score_size = 3;
-
-  initscr();
-  noecho();
-  curs_set(FALSE);
-
-  getmaxyx(stdscr, parent_y, parent_x);
-
-  WINDOW *field = newwin(parent_y - score_size, parent_x, 0, 0);
-  WINDOW *score = newwin(score_size, parent_x, parent_y - score_size, 0);
-
-  draw_borders(field);
-  draw_borders(score);
-
-  mvwprintw(field, 0, 0, "Field");
-  mvwprintw(score, 0, 0, "Score");
-
-
-  wrefresh(field);
-  wrefresh(score);
-
-  sleep(5);
-  endwin();
-
 }
 
 int main(int argc, char **argv) {
