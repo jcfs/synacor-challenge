@@ -5,11 +5,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <ncurses.h>
 
 #include "vm.h"
-
-#define MEM_SIZE      65536
-#define STACK_SIZE    65536
+#include "disassembler.h"
 
 #define REG(x)        (mem[x]-32768)
 #define ARG(x)        (mem[x] <= 32767 ? mem[x] : reg[mem[x]-32768])
@@ -196,59 +195,6 @@ void load(char * file) {
   close(fd);
 }
 
-int print_instruction(int opcode) {
-
-  printf("%5s ", opcode_names[opcode]);
-  uint8_t arg = opcode_pc[opcode];
-
-  if (arg>=2) {
-    if (mem[pc+1] >= 32768) {
-      printf("%c ", 'A' + mem[pc+1]-32768);
-    } else {
-      if (opcode == 19) 
-        printf("%c ", mem[pc+1]);
-      else 
-        printf("%x ", mem[pc+1]);
-    }
-  }
-
-  if (arg>=3) {
-    if (mem[pc+2] >= 32768) {
-      printf("%c ", 'A' + mem[pc+2]-32768);
-    } else {
-      printf("%x ", mem[pc+2]);
-    }
-  }
-
-  if (arg >= 4){
-    if (mem[pc+3] >= 32768) {
-      printf("%c ", 'A' + mem[pc+3]-32768);
-    } else {
-      printf("%x ", mem[pc+3]);
-    }
-  }
-
-  if (opcode == 17 || opcode == 18) printf("\n");
-
-}
-
-// disasembles the program loaded in memory
-// and outputs it in a readable format
-void disassemble() {
-  printf("Disassembling...\n");
-  while(pc <  program_size) {
-    printf("0x%04x: ", pc);
-    if (mem[pc] < 22) {
-      print_instruction(mem[pc]);
-      pc += opcode_pc[mem[pc]];
-    } else {
-      printf("0x%04x", mem[pc]);
-      pc++;
-    }
-    printf("\n");
-  }
-}
-
 // run the program loaded in memory
 int run() {
   while(1) {
@@ -256,6 +202,60 @@ int run() {
 
     pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
   }
+}
+
+void draw_borders(WINDOW *screen) {
+  int x, y, i;
+  getmaxyx(screen, y, x);
+
+  mvwprintw(screen, 0, 0, "+");
+
+  mvwprintw(screen, y - 1, 0, "+");
+  mvwprintw(screen, 0, x - 1, "+");
+  mvwprintw(screen, y - 1, x - 1, "+");
+
+  for (i = 1; i < (y - 1); i++) {
+    mvwprintw(screen, i, 0, "|");
+    mvwprintw(screen, i, x - 1, "|");
+    mvwprintw(screen, i, x - 35, "|");
+  }
+
+  for (i = 1; i < (x - 1); i++) {
+    mvwprintw(screen, 0, i, "-");
+    mvwprintw(screen, y - 1, i, "-");
+  }
+
+
+  mvwprintw(screen, 0, x - 35, "+");
+  mvwprintw(screen, y - 1, x - 35, "+");
+}
+
+int run_curses() {
+  int parent_x, parent_y;
+  int score_size = 3;
+
+  initscr();
+  noecho();
+  curs_set(FALSE);
+
+  getmaxyx(stdscr, parent_y, parent_x);
+
+  WINDOW *field = newwin(parent_y - score_size, parent_x, 0, 0);
+  WINDOW *score = newwin(score_size, parent_x, parent_y - score_size, 0);
+
+  draw_borders(field);
+  draw_borders(score);
+
+  mvwprintw(field, 0, 0, "Field");
+  mvwprintw(score, 0, 0, "Score");
+
+
+  wrefresh(field);
+  wrefresh(score);
+
+  sleep(5);
+  endwin();
+
 }
 
 int main(int argc, char **argv) {
@@ -268,7 +268,9 @@ int main(int argc, char **argv) {
 
   if (!strncmp(argv[1], "-r", 2)) {
     run();
-  } else if (!strncmp(argv[1], "-s", 2)) {
-    disassemble();
+  } else  if (!strncmp(argv[1], "-c", 2)) {
+    run_curses();
+  }  else if (!strncmp(argv[1], "-s", 2)) {
+    disassemble_print_program();
   }
 }

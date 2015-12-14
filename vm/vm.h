@@ -1,6 +1,21 @@
 #ifndef VM_H
 #define VM_H
 
+#define MEM_SIZE      65536
+#define STACK_SIZE    65536
+
+#define IS_REG(x)     x >= 32768
+
+extern uint16_t mem[MEM_SIZE];
+extern uint16_t stack[STACK_SIZE];
+extern uint16_t reg[8];
+extern uint16_t pc;
+extern uint16_t * sp;
+extern uint16_t program_size;
+
+extern char * opcode_names[];
+extern uint8_t opcode_pc[];
+
 // functions definition
 // stop execution and terminate the program
 int halt(uint16_t a, uint16_t b, uint16_t c);
