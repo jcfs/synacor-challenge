@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <ncurses.h>
 
+#include "io.h"
 #include "vm.h"
 #include "curses.h"
 #include "disassembler.h"
@@ -40,9 +42,12 @@ int main(int argc, char **argv) {
   if (!strncmp(argv[1], "-r", 2)) {
     run();
   } else  if (!strncmp(argv[1], "-c", 2)) {
+    create_io_thread();
     run_curses();
   }  else if (!strncmp(argv[1], "-s", 2)) {
     disassemble_print_program();
   }
+
+  return 0;
 }
 

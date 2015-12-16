@@ -1,0 +1,6 @@
+* functions to the vm
+  - F keys to trace, debug, breakpoints, follow pc
+  - dump disassembled code
+  - force new disassemble (maybe just wmem regions)
+* find a way to update the status window without slowing the vm too much
+* clean up code

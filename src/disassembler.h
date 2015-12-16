@@ -22,7 +22,7 @@ void disassemble_print_program();
 void free_disassemble();
 
 // update the disassemble at a specific memory address
-char ** update_disassemble(uint16_t addr);
+void update_disassemble(uint16_t addr);
 
 
 

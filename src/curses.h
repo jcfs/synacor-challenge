@@ -12,7 +12,6 @@ extern WINDOW * disassembler_window;
 
 
 int run_curses();
-int scroll_down();
-int scroll_up();
-int sbs();
+void scroll_down();
+void scroll_up();
 #endif

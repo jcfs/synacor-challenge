@@ -1,5 +1,6 @@
 dev version - 15/12/2015
 ------------------------------
 * refactored curses.c for code readability
-* threaded IO - a thread that delegates the io to the vm or the program being
-run
+* threaded IO - a thread that delegates the io to the vm or the program being run
+* curses interface - work in progress - looking pretty so far
+

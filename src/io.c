@@ -26,7 +26,7 @@ void * handle_io() {
     char ch = getchar_unlocked();
     if (valid_program_char(ch)) {
       pthread_mutex_lock(&io_mutex);
-      vm_shared_io_buffer[io_buffer_index++] = (ch == '\r' ? '\n' : ch);
+      vm_shared_io_buffer[io_buffer_index++] = (ch == '\r' ? '\n' : ch); // stupid hack, dunno why it is needed yet
       pthread_mutex_unlock(&io_mutex);
     } else {
       if (ch == '-') {
@@ -83,5 +83,4 @@ void putchr(uint16_t ch) {
   } else {
     putchar(ch);
   }
-
 }

@@ -34,7 +34,6 @@ int (*opcode_function[22])() = {
   (int *)&wmem, (int *) &call, (int *) &ret,
   (int *)&out, (int *) &in, (int *) &noop
 };
-
 // opcode pc increase array
 uint8_t opcode_pc[22] = {
   1, 3, 2, 

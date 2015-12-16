@@ -24,15 +24,15 @@ void update_disassembler();
 int parent_x, parent_y;
 int disassembler_program_row = 0;
 
-int scroll_up() {
-  disassembler_update = WINDOW_UPDATE;
+void scroll_up() {
+  disassembler_update |= WINDOW_UPDATE;
 
   disassembler_program_row-=30;
   if (disassembler_program_row < 0)
     disassembler_program_row = 0;
 }
-int scroll_down() {
-  disassembler_update = WINDOW_UPDATE;
+void scroll_down() {
+  disassembler_update |= WINDOW_UPDATE;
   disassembler_program_row+=30;
 }
 
@@ -41,18 +41,13 @@ int run_curses() {
   init_curses();
   init_windows();
 
-  create_io_thread();
   disassemble();
-
-  int flag = 0;
 
   disassembler_update = WINDOW_UPDATE;
   while(1) {
     uint16_t opcode = mem[pc];
 
-    if (!flag && opcode == 20) { 
-      status_update = WINDOW_UPDATE;
-    }
+    status_update = WINDOW_UPDATE;
 
     update_disassembler();
     update_status();
@@ -121,11 +116,24 @@ void update_status() {
   if (status_update & WINDOW_UPDATE) {
     status_update = 0;
     mvwprintw(status_window, 1, 1, "> Synacor Challenge VM v0.0.1-super-mega-alpha");
-    mvwprintw(status_window, 2, 1, "> Program Size: %dB\tProgram Counter: 0x%x\t", program_size*sizeof(uint16_t), pc);
+    mvwprintw(status_window, 2, 1, "> Program Size: %dB\t\tProgram Counter: 0x%x\t", program_size*sizeof(uint16_t), pc);
     mvwprintw(status_window, 3, 1, "> A: %5d\tB: %5d\tC: %5d\tD: %5d\t", reg[0], reg[1], reg[2], reg[3]);
     mvwprintw(status_window, 4, 1, "> E: %5d\tF: %5d\tG: %5d\tH: %5d\t", reg[4], reg[5], reg[6], reg[7]);
     wrefresh(status_window);
   }
+}
+
+// validates if the program counter is inside the disassembler window
+// it is used when we need to know if we should update the disassembler window
+int pc_in_disassembler_window() {
+  int i = 0;
+
+  for(i = 0; i< parent_y - 8; i++) {
+    if (pc_mapping[disassembler_program_row+i] == pc)
+      return TRUE;
+  }
+
+  return FALSE;
 }
 
 uint8_t pc_is_inside = 0;
@@ -153,19 +161,6 @@ void update_disassembler() {
     }
     wrefresh(disassembler_window);
   }
-}
-
-// validates if the program counter is inside the disassembler window
-// it is used when we need to know if we should update the disassembler window
-int pc_in_disassembler_window() {
-  int i = 0;
-
-  for(i = 0; i< parent_y - 8; i++) {
-    if (pc_mapping[disassembler_program_row+i] == pc)
-      return TRUE;
-  }
-
-  return FALSE;
 }
 
 

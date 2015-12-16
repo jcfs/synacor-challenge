@@ -94,7 +94,7 @@ void disassemble_print_program() {
 /**
  * Updates an address in the current disassembled program 
  */
-char ** update_dissassemble(uint16_t addr) {
+void update_dissassemble(uint16_t addr) {
   free(d_program[addr]);
   d_program[addr] = calloc(INST_MAX_SIZE, sizeof(char));
   print_instruction(d_program[addr], addr);
