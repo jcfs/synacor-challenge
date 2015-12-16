@@ -5,7 +5,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <ncurses.h>
 
 #include "io.h"
 #include "vm.h"

@@ -26,7 +26,11 @@ void handle_vm_io(char ch) {
       if (ch == '-') {
         scroll_down();
       } else if (ch == '.') {
-        scroll_up();
+        scroll_up(); 
+      } else if (ch == ',') {
+        step();
+      } else  if (ch == 27) {
+        exit(0);
       }
 }
 
@@ -39,7 +43,7 @@ void * handle_io() {
       vm_shared_io_buffer[io_buffer_index++] = (ch == '\r' ? '\n' : ch); // stupid hack, dunno why it is needed yet
       pthread_mutex_unlock(&io_mutex);
     } else {
-      handle_vm_io();
+      handle_vm_io(ch);
     }
   }
 }
@@ -70,7 +74,7 @@ char getchr() {
       wrefresh(vm_window);
       return ch;
     } else {
-      ch = 255;
+      ch = -1;
     }
 
     pthread_mutex_unlock(&io_mutex);

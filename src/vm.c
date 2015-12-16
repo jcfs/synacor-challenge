@@ -159,7 +159,7 @@ int out(uint16_t a, uint16_t b, uint16_t c) {
 int in(uint16_t a, uint16_t b, uint16_t c) {
   char ch = getchr();
 
-  if (ch == 255) {
+  if (ch == -1) {
     return 0;
   } else {
     SET_REG(pc + 1, ch);

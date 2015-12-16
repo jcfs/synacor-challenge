@@ -15,10 +15,19 @@ WINDOW * vm_window;
 WINDOW * disassembler_window;
 WINDOW * status_window;
 
+pthread_mutex_t sbs_mutex;
+
 void init_curses();
 void init_windows();
 void update_status();
 void update_disassembler();
+
+char should_run = 0;
+char sbs_mode = 0;
+void step() {
+    sbs_mode = 1;
+    should_run = 1;
+}
 
 // screen dimensions
 int parent_x, parent_y;
@@ -52,8 +61,13 @@ int run_curses() {
     update_disassembler();
     update_status();
 
-    // run program
-    pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
+    if (should_run && sbs_mode) {
+        should_run = 0;
+        // run program
+        pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
+    } else if (!sbs_mode) {
+        pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
+    }
   }
 
   endwin();
