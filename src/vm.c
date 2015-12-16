@@ -154,12 +154,18 @@ int ret(uint16_t a, uint16_t b, uint16_t c) {
 }
 
 int out(uint16_t a, uint16_t b, uint16_t c) {
-  print(a);
+  putchr(a);
   return 1;
 }
 int in(uint16_t a, uint16_t b, uint16_t c) {
-  SET_REG(pc + 1, getchr());
-  return 1;
+  char ch = getchr();
+
+  if (ch == 255) {
+    return 0;
+  } else {
+    SET_REG(pc + 1, ch);
+    return 1;
+  }
 }
 
 int noop(uint16_t a, uint16_t b, uint16_t c) {

@@ -1,4 +1,4 @@
-LIBS  = -lncurses
+LIBS  = -lncurses -lpthread 
 CFLAGS = -Wall
 
 OBJS = disassembler.o vm.o curses.o io.o main.o
