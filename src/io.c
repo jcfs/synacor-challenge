@@ -20,6 +20,16 @@ int valid_program_char(char ch) {
   return ('a' <= ch && 'z' >= ch) || ch == '\r' || ch == '\n' || ch == ' ';
 }
 
+// handle input that should go to the vm instead of the program
+// running
+void handle_vm_io(char ch) {
+      if (ch == '-') {
+        scroll_down();
+      } else if (ch == '.') {
+        scroll_up();
+      }
+}
+
 // function that handles IO
 void * handle_io() {
   while(1) {
@@ -29,11 +39,7 @@ void * handle_io() {
       vm_shared_io_buffer[io_buffer_index++] = (ch == '\r' ? '\n' : ch); // stupid hack, dunno why it is needed yet
       pthread_mutex_unlock(&io_mutex);
     } else {
-      if (ch == '-') {
-        scroll_down();
-      } else if (ch == '.') {
-        scroll_up();
-      }
+      handle_vm_io();
     }
   }
 }
