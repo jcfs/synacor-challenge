@@ -127,7 +127,7 @@ int print_instruction(char * buffer, uint16_t addr) {
       if (opcode == 19 && mem[addr+1] != '\n')
         bw += sprintf(buffer+bw, "%c ", mem[addr+1]);
       else
-        bw += sprintf(buffer+bw, "%x ", mem[addr+1]);
+        bw += sprintf(buffer+bw, "0x%04x ", mem[addr+1]);
     }
   }
 
@@ -136,7 +136,7 @@ int print_instruction(char * buffer, uint16_t addr) {
     if (IS_REG(mem[addr+2])) {
       bw += sprintf(buffer+bw, "%c ", 'A'+mem[addr+2]-32768);
     } else {
-      bw += sprintf(buffer+bw, "%x ", mem[addr+2]);
+      bw += sprintf(buffer+bw, "0x%04x ", mem[addr+2]);
     }
   }
 
@@ -145,7 +145,7 @@ int print_instruction(char * buffer, uint16_t addr) {
     if (IS_REG(mem[addr+3])) {
       bw += sprintf(buffer+bw, "%c ", 'A'+mem[addr+3]-32768);
     } else {
-      bw += sprintf(buffer+bw, "%x ", mem[addr+3]);
+      bw += sprintf(buffer+bw, "0x%04x ", mem[addr+3]);
     }
   }
   return opcode_pc[opcode];
