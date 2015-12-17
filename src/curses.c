@@ -2,13 +2,15 @@
 #include <stdint.h>
 #include <ncurses.h>
 #include <pthread.h>
+#include <string.h>
 
 #include "vm.h"
 #include "curses.h"
 #include "disassembler.h"
 
 // control flags
-uint8_t curses_running, status_update, disassembler_update;
+uint8_t status_update, disassembler_update;
+uint32_t running_mode;
 
 // window structs
 WINDOW * vm_window;
@@ -19,31 +21,64 @@ pthread_mutex_t sbs_mutex;
 
 void init_curses();
 void init_windows();
+void print_labels();
 void update_status();
 void update_disassembler();
 
 char should_run = 0;
 char sbs_mode = 0;
-void step() {
-    sbs_mode = 1;
-    should_run = 1;
+
+// functions that need syncronization
+// They are used by another thread
+uint32_t get_curses_mode() {
+  return running_mode;
+}
+
+// enables/disable trace mode, the disassembler 
+// window should follow pc
+void enable_trace() {
+  if (running_mode & TRACE_MODE_ACTIVE) {
+    running_mode = running_mode & ~(TRACE_MODE_ACTIVE&0xFFFFFFFF);
+  } else {
+    running_mode |= TRACE_MODE_ACTIVE;
+  }
+}
+
+// re-run the disassembler to get fresh new disassembled 
+// code with the current memory state
+void run_disassembler() {
+  disassemble();
+}
+
+void dump_disassembler() {
+
+}
+
+void next_step() {
+
+}
+
+// enables and disables the set register value mode
+void enable_set_value() {
+  running_mode |= SET_VALUE_ACTIVE;
+}
+
+void disable_set_value() {
+  running_mode &= ~SET_VALUE_ACTIVE;
+}
+
+// enables and disables set breakpoint value mode
+void enable_set_breakpoint() {
+  running_mode |= SET_BP_ACTIVE;
+}
+
+void disable_set_breakpoint() {
+  running_mode &= ~SET_BP_ACTIVE;
 }
 
 // screen dimensions
 int parent_x, parent_y;
 int disassembler_program_row = 0;
-
-void scroll_up() {
-  disassembler_update |= WINDOW_UPDATE;
-
-  disassembler_program_row-=30;
-  if (disassembler_program_row < 0)
-    disassembler_program_row = 0;
-}
-void scroll_down() {
-  disassembler_update |= WINDOW_UPDATE;
-  disassembler_program_row+=30;
-}
 
 // main function that actually runs the program and updates all the windows
 int run_curses() {
@@ -54,6 +89,7 @@ int run_curses() {
 
   disassembler_update = WINDOW_UPDATE;
   while(1) {
+
     uint16_t opcode = mem[pc];
 
     status_update = WINDOW_UPDATE;
@@ -81,7 +117,7 @@ void init_curses() {
   initscr();
   noecho();
   curs_set(FALSE);
-  curses_running = 1;
+  running_mode |= CURSES_MODE_ACTIVE;
 }
 
 // print borders to a screen
@@ -112,6 +148,7 @@ void init_windows() {
   status_window = newwin(7, parent_x, parent_y-7,0);
 
   // draw the boarders
+
   draw_borders(stdscr);
   draw_borders(status_window);
 
@@ -122,14 +159,30 @@ void init_windows() {
 
   wrefresh(stdscr);
   wrefresh(status_window);
+  print_labels();
 }
 
+void print_pair(WINDOW * window, char * label, char * value, int x, int y) {
+    wattron(window, A_REVERSE); 
+    mvwprintw(window, y, x, label);
+    wattroff(window, A_REVERSE);
+    mvwprintw(window, y, x+strlen(label), value);
+}
+
+void print_labels() {
+   mvwprintw(status_window, 1, 1, "> Synacor Challenge VM v0.0.1-super-mega-alpha");
+   print_pair(status_window, "^D", " Disassemble", parent_x - 33, 1);
+   print_pair(status_window, "^X", " Dump", parent_x - 18, 1);
+   print_pair(status_window, "^A", " Trace", parent_x - 33, 2);
+   print_pair(status_window, "^E", " Step", parent_x - 18, 2);
+   print_pair(status_window, "^Q", " Breakpoint", parent_x - 33, 3);
+   print_pair(status_window, "^W", " Set Value", parent_x - 18, 3);
+   wrefresh(status_window);
+}
 
 // update status window with registers and pc infirmation
 void update_status() {
-  if (status_update & WINDOW_UPDATE) {
-    status_update = 0;
-    mvwprintw(status_window, 1, 1, "> Synacor Challenge VM v0.0.1-super-mega-alpha");
+  if (running_mode & TRACE_MODE_ACTIVE) {
     mvwprintw(status_window, 2, 1, "> Program Size: %dB\t\tProgram Counter: 0x%x\t", program_size*sizeof(uint16_t), pc);
     mvwprintw(status_window, 3, 1, "> A: %5d\tB: %5d\tC: %5d\tD: %5d\t", reg[0], reg[1], reg[2], reg[3]);
     mvwprintw(status_window, 4, 1, "> E: %5d\tF: %5d\tG: %5d\tH: %5d\t", reg[4], reg[5], reg[6], reg[7]);
@@ -137,8 +190,10 @@ void update_status() {
   }
 }
 
+
 // validates if the program counter is inside the disassembler window
 // it is used when we need to know if we should update the disassembler window
+// NOT CURRENTLY USED
 int pc_in_disassembler_window() {
   int i = 0;
 
@@ -155,8 +210,15 @@ uint8_t pc_is_inside = 0;
 void update_disassembler() {
   int i = 0;
 
-  disassembler_update |= pc_in_disassembler_window() ? WINDOW_UPDATE : NO_UPDATE;
-  
+  if (running_mode & TRACE_MODE_ACTIVE) {
+    for(i = 0; i < program_size; i++) {
+      if (pc_mapping[i] == pc) {
+        disassembler_update |= WINDOW_UPDATE;
+        disassembler_program_row = i;
+      }
+    }
+  }
+
   if (disassembler_update & WINDOW_UPDATE || pc_is_inside) {
 
     pc_is_inside = disassembler_update & WINDOW_UPDATE;

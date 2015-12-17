@@ -25,7 +25,7 @@ extern uint16_t program_size;
 
 extern char * opcode_names[];
 extern uint8_t opcode_pc[];
-extern int (*opcode_function[22])();
+extern int (*opcode_function[22])(uint16_t, uint16_t, uint16_t);
 extern int run();
 
 // functions definition

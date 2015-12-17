@@ -1,3 +1,14 @@
+dev version - 16/12/2015
+------------------------------
+* code clean up
+* function keys to the VM
+	- trace implemented - now disassemble and status windows only update on trace mode
+		on trace mode the disassemble window will follow the pc;
+	- new disassemble implemented - function key to force another disassemble of
+	the memory state.
+* refactored IO thread to support new function keys. vm input is totally
+separated from program input
+
 dev version - 15/12/2015
 ------------------------------
 * refactored curses.c for code readability

@@ -25,14 +25,10 @@ char * opcode_names[22] = {
 };
 
 // opcode function pointers
-int (*opcode_function[22])() = {
-  (int *)&halt, (int *)&set, (int *)&push,
-  (int *)&pop, (int *) &eq, (int *) &gt,
-  (int *)&jmp, (int *) &jt, (int *) &jf,
-  (int *)&add, (int *) &mult, (int *) &mod,(int*) &and,
-  (int *)&or, (int *) &not, (int *) &rmem,
-  (int *)&wmem, (int *) &call, (int *) &ret,
-  (int *)&out, (int *) &in, (int *) &noop
+int (*opcode_function[22])(uint16_t, uint16_t, uint16_t) = {
+  halt, set, push, pop, eq, gt, jmp, jt, jf,
+  add, mult, mod, and, or, not, rmem, wmem, 
+  call, ret, out, in, noop
 };
 // opcode pc increase array
 uint8_t opcode_pc[22] = {
@@ -159,7 +155,7 @@ int out(uint16_t a, uint16_t b, uint16_t c) {
 int in(uint16_t a, uint16_t b, uint16_t c) {
   char ch = getchr();
 
-  if (ch == -1) {
+  if (ch == 255) {
     return 0;
   } else {
     SET_REG(pc + 1, ch);

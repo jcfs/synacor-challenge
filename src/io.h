@@ -1,6 +1,8 @@
 #ifndef IO_H
 #define IO_H
 
+#include <stdint.h>
+
 // prints the char represented by the argument
 void putchr(uint16_t);
 
