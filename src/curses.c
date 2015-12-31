@@ -12,6 +12,9 @@
 uint8_t status_update, disassembler_update;
 uint32_t running_mode;
 
+// breakpoints array with a maximum of 64 breakpoints
+uint16_t breakpoints[64] = { -1 };
+
 // window structs
 WINDOW * vm_window;
 WINDOW * disassembler_window;
@@ -54,6 +57,15 @@ void dump_disassembler() {
 
 }
 
+void set_breakpoint(uint16_t address) {
+  int i = 0;
+
+  for(i = 0; i < 64; i++) {
+    if (breakpoints[i] != -1)
+      breakpoints[i] = address;
+  }
+}
+
 void next_step() {
 
 }
@@ -64,7 +76,7 @@ void enable_set_value() {
 }
 
 void disable_set_value() {
-  running_mode &= ~SET_VALUE_ACTIVE;
+  running_mode &= ~(SET_VALUE_ACTIVE&0xFFFFFFFF);
 }
 
 // enables and disables set breakpoint value mode
@@ -73,7 +85,7 @@ void enable_set_breakpoint() {
 }
 
 void disable_set_breakpoint() {
-  running_mode &= ~SET_BP_ACTIVE;
+  running_mode &= ~(SET_BP_ACTIVE&0xFFFFFFFF);
 }
 
 // screen dimensions
@@ -82,12 +94,16 @@ int disassembler_program_row = 0;
 
 // main function that actually runs the program and updates all the windows
 int run_curses() {
+  int i = 0;
   init_curses();
   init_windows();
 
   disassemble();
 
   disassembler_update = WINDOW_UPDATE;
+
+
+  for(i = 0; i < 64; i++) breakpoints[i] = -1;
   while(1) {
 
     uint16_t opcode = mem[pc];
@@ -97,12 +113,21 @@ int run_curses() {
     update_disassembler();
     update_status();
 
-    if (should_run && sbs_mode) {
+    int bp = 0;
+    for(i = 0; i < 64; i++) {
+      if (breakpoints[i] == pc)
+        bp = 1;
+
+    }
+
+    if (!bp) {
+      if (should_run && sbs_mode) {
         should_run = 0;
         // run program
         pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
-    } else if (!sbs_mode) {
+      } else if (!sbs_mode) {
         pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
+      }
     }
   }
 

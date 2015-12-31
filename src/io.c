@@ -32,6 +32,20 @@ int valid_program_char(char ch) {
 // handle input that should go to the vm instead of the program
 // running
 void handle_vm_io(char ch) {
+  if (get_curses_mode() & SET_BP_ACTIVE) {
+    char chr;
+    int i = 0;
+    char buffer[64];
+
+    while((chr = getchar()) != '\r') {
+      buffer[i++] = chr;
+      mvwprintw(status_window, 5, 30+i, "%c", chr);
+      wrefresh(status_window);
+    }
+    set_breakpoint(strtol(buffer, NULL, 16));
+    disable_set_breakpoint();
+  } else 
+
   // ALT mode on - we need to read one more character
   if (ch == 27) {
     ch = getchar();

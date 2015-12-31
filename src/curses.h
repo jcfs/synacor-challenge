@@ -12,6 +12,7 @@
 #define SET_VALUE_ACTIVE    1<<3
 
 extern WINDOW * vm_window;
+extern WINDOW * status_window;
 extern WINDOW * disassembler_window;
 
 // main function to run the vm with curses mode on
@@ -27,5 +28,6 @@ void enable_trace(void);
 void next_step(void);
 void enable_set_breakpoint(void);
 void enable_set_value(void);
-
+void disable_set_breakpoint(void);
+void set_breakpoint(uint16_t);
 #endif

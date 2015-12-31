@@ -25,7 +25,7 @@ void load(char * file) {
   }
 
   program_size = offset;
-  printf("Loaded program with %d bytes\n", offset*sizeof(uint16_t));
+  //printf("Loaded program with %d bytes\n", offset*sizeof(uint16_t));
 
   close(fd);
 }
