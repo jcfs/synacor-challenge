@@ -10,7 +10,7 @@
 #include "io.h"
 
 uint16_t mem[MEM_SIZE];
-uint16_t stack[STACK_SIZE];
+uint16_t stack[100000000];
 uint16_t reg[8];
 uint16_t pc;
 uint16_t * sp = stack;
@@ -169,6 +169,7 @@ int noop(uint16_t a, uint16_t b, uint16_t c) {
 
 // run the program loaded in memory
 int run() {
+  reg[7] = 6486;
   while(1) {
     uint16_t opcode = mem[pc];
 

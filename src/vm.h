@@ -17,7 +17,7 @@
 #define C             ARG(pc+3)
 
 extern uint16_t mem[MEM_SIZE];
-extern uint16_t stack[STACK_SIZE];
+extern uint16_t stack[];
 extern uint16_t reg[8];
 extern uint16_t pc;
 extern uint16_t * sp;

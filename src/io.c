@@ -13,10 +13,13 @@
 
 pthread_t io_thread;
 
+char input[64000];
+uint16_t input_size, input_offset;
+
 uint8_t io_mode;
 // io buffer
 char vm_shared_io_buffer[64000];
-uint16_t io_buffer_index;
+uint16_t io_buffer_index, io_buffer_ri;
 pthread_mutex_t io_mutex;
 
 // vm input function mapping
@@ -42,6 +45,7 @@ void handle_vm_io(char ch) {
       mvwprintw(status_window, 5, 30+i, "%c", chr);
       wrefresh(status_window);
     }
+    buffer[i] = 0;
     set_breakpoint(strtol(buffer, NULL, 16));
     disable_set_breakpoint();
   } else 
@@ -61,10 +65,20 @@ void handle_vm_io(char ch) {
 // function that handles IO
 void * handle_io() {
   while(1) {
-    char ch = getchar_unlocked();
+    char ch;
+    if (input_offset < input_size) {
+      ch = input[input_offset++];
+    } else {
+      ch = getchar_unlocked();
+    }
     if (valid_program_char(ch)) {
       pthread_mutex_lock(&io_mutex);
-      vm_shared_io_buffer[io_buffer_index++] = (ch == '\r' ? '\n' : ch); // stupid hack, dunno why it is needed yet
+      vm_shared_io_buffer[io_buffer_index++] = ((ch == '\r' || ch == '\n') ? '\n' : ch); // stupid hack, dunno why it is needed yet
+
+      if (io_buffer_index > 63999) {
+        io_buffer_index = 0;
+      }
+
       pthread_mutex_unlock(&io_mutex);
     } else {
       handle_vm_io(ch);
@@ -92,12 +106,16 @@ char getchr() {
   // to read the characters from - we need to syncronize it
   if (get_curses_mode() & CURSES_MODE_ACTIVE) {
     pthread_mutex_lock(&io_mutex);
-    if (io_buffer_index > 0 && vm_shared_io_buffer[io_buffer_index - 1]) {
-      ch = vm_shared_io_buffer[--io_buffer_index];
+    if (io_buffer_ri < io_buffer_index || (io_buffer_ri && !io_buffer_index)) {
+      ch = vm_shared_io_buffer[io_buffer_ri++];
+
+      if (io_buffer_ri > 63999)
+        io_buffer_ri = 0;
+      
       // this is here to release the lock as soon as possible
-      pthread_mutex_unlock(&io_mutex);
       wprintw(vm_window, "%c", ch);
       wrefresh(vm_window);
+      pthread_mutex_unlock(&io_mutex);
       return ch;
     } else {
       ch = -1;

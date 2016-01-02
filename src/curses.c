@@ -60,6 +60,7 @@ void dump_disassembler() {
 void set_breakpoint(uint16_t address) {
   int i = 0;
 
+  printf("BREAKPOINT AT %x\n", address);
   for(i = 0; i < 64; i++) {
     if (breakpoints[i] != -1)
       breakpoints[i] = address;
@@ -67,7 +68,8 @@ void set_breakpoint(uint16_t address) {
 }
 
 void next_step() {
-
+  should_run = 1;
+  reg[7] = 25734;
 }
 
 // enables and disables the set register value mode
@@ -113,21 +115,18 @@ int run_curses() {
     update_disassembler();
     update_status();
 
-    int bp = 0;
     for(i = 0; i < 64; i++) {
       if (breakpoints[i] == pc)
-        bp = 1;
-
+        sbs_mode = 1;
     }
 
-    if (!bp) {
-      if (should_run && sbs_mode) {
-        should_run = 0;
-        // run program
-        pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
-      } else if (!sbs_mode) {
-        pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
-      }
+    if (sbs_mode && should_run) {
+      should_run = 0;
+      pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
+    } 
+    
+    if (!sbs_mode) {
+      pc += ((*opcode_function[opcode])(A,B,C) ? opcode_pc[opcode] : 0);
     }
   }
 
@@ -188,21 +187,21 @@ void init_windows() {
 }
 
 void print_pair(WINDOW * window, char * label, char * value, int x, int y) {
-    wattron(window, A_REVERSE); 
-    mvwprintw(window, y, x, label);
-    wattroff(window, A_REVERSE);
-    mvwprintw(window, y, x+strlen(label), value);
+  wattron(window, A_REVERSE); 
+  mvwprintw(window, y, x, label);
+  wattroff(window, A_REVERSE);
+  mvwprintw(window, y, x+strlen(label), value);
 }
 
 void print_labels() {
-   mvwprintw(status_window, 1, 1, "> Synacor Challenge VM v0.0.1-super-mega-alpha");
-   print_pair(status_window, "^D", " Disassemble", parent_x - 33, 1);
-   print_pair(status_window, "^X", " Dump", parent_x - 18, 1);
-   print_pair(status_window, "^A", " Trace", parent_x - 33, 2);
-   print_pair(status_window, "^E", " Step", parent_x - 18, 2);
-   print_pair(status_window, "^Q", " Breakpoint", parent_x - 33, 3);
-   print_pair(status_window, "^W", " Set Value", parent_x - 18, 3);
-   wrefresh(status_window);
+  mvwprintw(status_window, 1, 1, "> Synacor Challenge VM v0.0.1-super-mega-alpha");
+  print_pair(status_window, "^D", " Disassemble", parent_x - 33, 1);
+  print_pair(status_window, "^X", " Dump", parent_x - 18, 1);
+  print_pair(status_window, "^A", " Trace", parent_x - 33, 2);
+  print_pair(status_window, "^E", " Step", parent_x - 18, 2);
+  print_pair(status_window, "^Q", " Breakpoint", parent_x - 33, 3);
+  print_pair(status_window, "^W", " Set Value", parent_x - 18, 3);
+  wrefresh(status_window);
 }
 
 // update status window with registers and pc infirmation

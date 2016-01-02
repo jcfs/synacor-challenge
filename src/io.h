@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+extern char input[64000];
+extern uint16_t input_size;
+
 // prints the char represented by the argument
 void putchr(uint16_t);
 

@@ -11,6 +11,26 @@
 #include "curses.h"
 #include "disassembler.h"
 
+void load_input(char * file) {
+  int fd = open(file, O_RDONLY);
+
+  if (fd == -1) {
+    printf("Error loading program [%s]\n", file);
+    exit(1);
+  }
+
+  ssize_t br, offset = 0;
+  while((br = read(fd, input + offset, sizeof(char))) > 0) {
+    offset++;
+  }
+
+  input_size = offset;
+
+  printf("%s\n", input);
+  close(fd);
+
+}
+
 void load(char * file) {
   int fd = open(file, O_RDONLY);
 
@@ -31,7 +51,7 @@ void load(char * file) {
 }
 
 int main(int argc, char **argv) {
-  if (argc != 3) {
+  if (argc < 3) {
     printf("usage: %s [option] <program_to_load>\nOptions:\n  -r: run porgram\n  -s: dissassemble program\n", argv[0]);
     exit(1);
   }
@@ -41,6 +61,10 @@ int main(int argc, char **argv) {
   if (!strncmp(argv[1], "-r", 2)) {
     run();
   } else  if (!strncmp(argv[1], "-c", 2)) {
+    if (argc > 3 && !strncmp(argv[3], "-i", 2)) {
+      printf("Loading input from: %s\n", argv[4]);
+      load_input(argv[4]);
+    }
     create_io_thread();
     run_curses();
   }  else if (!strncmp(argv[1], "-s", 2)) {
