@@ -8,7 +8,7 @@
 char ** d_program;
 uint16_t * pc_mapping;
 
-int print_instruction(char * buffer, uint16_t addr);
+static int print_instruction(char * buffer, uint16_t addr);
 //
 // External Functions
 //
@@ -103,7 +103,7 @@ void update_dissassemble(uint16_t addr) {
 //
 // Internal functions
 //
-int print_instruction(char * buffer, uint16_t addr) {
+static int print_instruction(char * buffer, uint16_t addr) {
   int bw = 0;
   int opcode = mem[addr];
 

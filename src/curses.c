@@ -9,8 +9,8 @@
 #include "disassembler.h"
 
 // control flags
-uint8_t status_update, disassembler_update;
-uint32_t running_mode;
+static uint8_t status_update, disassembler_update;
+static uint32_t running_mode;
 
 // breakpoints array with a maximum of 64 breakpoints
 uint16_t breakpoints[64] = { -1 };
@@ -20,13 +20,11 @@ WINDOW * vm_window;
 WINDOW * disassembler_window;
 WINDOW * status_window;
 
-pthread_mutex_t sbs_mutex;
-
-void init_curses();
-void init_windows();
-void print_labels();
-void update_status();
-void update_disassembler();
+static void init_curses();
+static void init_windows();
+static void print_labels();
+static void update_status();
+static void update_disassembler();
 
 char should_run = 0;
 char sbs_mode = 0;
@@ -69,7 +67,11 @@ void set_breakpoint(uint16_t address) {
 
 void next_step() {
   should_run = 1;
-  reg[7] = 25734;
+  
+  reg[7] = 0x6486;
+  mem[0x156d]=6;
+  mem[0x1571]=0x15;
+  mem[0x1572]=0x15;
 }
 
 // enables and disables the set register value mode
@@ -137,7 +139,7 @@ int run_curses() {
 // Internal functions
 //
 
-void init_curses() {
+static void init_curses() {
   initscr();
   noecho();
   curs_set(FALSE);
@@ -145,7 +147,7 @@ void init_curses() {
 }
 
 // print borders to a screen
-void draw_borders(WINDOW *screen) {
+static void draw_borders(WINDOW *screen) {
   int x, y, i;
   getmaxyx(screen, y, x);
 
@@ -163,7 +165,7 @@ void draw_borders(WINDOW *screen) {
 // vm_window: window that gets the output of the program
 // disassembler_window: window with the disassembled code
 // status_window: window with the current vm status
-void init_windows() {
+static void init_windows() {
   getmaxyx(stdscr, parent_y, parent_x);
 
   // windows creation
@@ -186,14 +188,14 @@ void init_windows() {
   print_labels();
 }
 
-void print_pair(WINDOW * window, char * label, char * value, int x, int y) {
+static void print_pair(WINDOW * window, char * label, char * value, int x, int y) {
   wattron(window, A_REVERSE); 
   mvwprintw(window, y, x, label);
   wattroff(window, A_REVERSE);
   mvwprintw(window, y, x+strlen(label), value);
 }
 
-void print_labels() {
+static void print_labels() {
   mvwprintw(status_window, 1, 1, "> Synacor Challenge VM v0.0.1-super-mega-alpha");
   print_pair(status_window, "^D", " Disassemble", parent_x - 33, 1);
   print_pair(status_window, "^X", " Dump", parent_x - 18, 1);
@@ -205,7 +207,7 @@ void print_labels() {
 }
 
 // update status window with registers and pc infirmation
-void update_status() {
+static void update_status() {
   if (running_mode & TRACE_MODE_ACTIVE) {
     mvwprintw(status_window, 2, 1, "> Program Size: %dB\t\tProgram Counter: 0x%x\t", program_size*sizeof(uint16_t), pc);
     mvwprintw(status_window, 3, 1, "> A: %5d\tB: %5d\tC: %5d\tD: %5d\t", reg[0], reg[1], reg[2], reg[3]);
@@ -218,20 +220,10 @@ void update_status() {
 // validates if the program counter is inside the disassembler window
 // it is used when we need to know if we should update the disassembler window
 // NOT CURRENTLY USED
-int pc_in_disassembler_window() {
-  int i = 0;
 
-  for(i = 0; i< parent_y - 8; i++) {
-    if (pc_mapping[disassembler_program_row+i] == pc)
-      return TRUE;
-  }
-
-  return FALSE;
-}
-
-uint8_t pc_is_inside = 0;
+static uint8_t pc_is_inside = 0;
 // updates the disassembler window if it must be updated
-void update_disassembler() {
+static void update_disassembler() {
   int i = 0;
 
   if (running_mode & TRACE_MODE_ACTIVE) {
@@ -262,6 +254,3 @@ void update_disassembler() {
     wrefresh(disassembler_window);
   }
 }
-
-
-

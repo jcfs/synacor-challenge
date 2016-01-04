@@ -16,6 +16,56 @@ uint16_t pc;
 uint16_t * sp = stack;
 uint16_t program_size;
 
+// functions definition
+// stop execution and terminate the program
+static int halt(uint16_t a, uint16_t b, uint16_t c);
+//set register <a> to the value of <b>
+static int set(uint16_t a, uint16_t b, uint16_t c);
+//push <a> onto the stack
+static int push(uint16_t a, uint16_t b, uint16_t c);
+//remove the top element from the stack and write it into <a>; empty stack = error
+static int pop(uint16_t a, uint16_t b, uint16_t c);
+//set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
+static int eq(uint16_t a, uint16_t b, uint16_t c);
+//set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
+static int gt(uint16_t a, uint16_t b, uint16_t c);
+//jump to <a>
+static int jmp(uint16_t a, uint16_t b, uint16_t c);
+//if <a> is nonzero, jump to <b>
+static int jt(uint16_t a, uint16_t b, uint16_t c);
+//if <a> is zero, jump to <b>
+static int jf(uint16_t a, uint16_t b, uint16_t c);
+//assign into <a> the sum of <b> and <c> (modulo 32768)
+static int add(uint16_t a, uint16_t b, uint16_t c);
+//store into <a> the product of <b> and <c> (modulo 32768)
+static int mult(uint16_t a, uint16_t b, uint16_t c);
+//store into <a> the remainder of <b> divided by <c>
+static int mod(uint16_t a, uint16_t b, uint16_t c);
+//stores into <a> the bitwise and of <b> and <c>
+static int and(uint16_t a, uint16_t b, uint16_t c);
+//stores into <a> the bitwise or of <b> and <c>
+static int or(uint16_t a, uint16_t b, uint16_t c);
+//stores 15-bit bitwise inverse of <b> in <a>
+static int not(uint16_t a, uint16_t b, uint16_t c);
+//read memory at address <b> and write it to <a>
+static int rmem(uint16_t a, uint16_t b, uint16_t c);
+//write the value from <b> into memory at address <a>
+static int wmem(uint16_t a, uint16_t b, uint16_t c);
+//write the address of the next instruction to the stack and jump to <a>
+static int call(uint16_t a, uint16_t b, uint16_t c);
+//remove the top element from the stack and jump to it; empty stack = halt
+static int ret(uint16_t a, uint16_t b, uint16_t c);
+//write the character represented by ascii code <a> to the terminal
+static int out(uint16_t a, uint16_t b, uint16_t c);
+//read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts
+//it will continue until a newline is encountered; this means that you can safely read whole the keyboard and 
+//trust that they will be fully read
+static int in(uint16_t a, uint16_t b, uint16_t c);
+// no operation
+static int noop(uint16_t a, uint16_t b, uint16_t c);
+
+
+
 // opcode names order
 char * opcode_names[22] = {
   "halt", "set", "push", "pop", "eq", 
@@ -42,42 +92,42 @@ uint8_t opcode_pc[22] = {
 };
 
 // opcode function implementations
-int halt(uint16_t a, uint16_t b, uint16_t c) {
+static int halt(uint16_t a, uint16_t b, uint16_t c) {
   exit(0);
 }
 
-int set(uint16_t a, uint16_t b, uint16_t c) {
+static int set(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, b);
   return 1;
 }
 
-int push(uint16_t a, uint16_t b, uint16_t c) {
+static int push(uint16_t a, uint16_t b, uint16_t c) {
   *sp++ = a;
   return 1;
 }
 
-int pop(uint16_t a, uint16_t b, uint16_t c) {
+static int pop(uint16_t a, uint16_t b, uint16_t c) {
   sp--;
   SET_REG(pc + 1, *sp);
   return 1;
 }
 
-int eq(uint16_t a, uint16_t b, uint16_t c) {
+static int eq(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, b == c);
   return 1;
 }
 
-int gt(uint16_t a, uint16_t b, uint16_t c) {
+static int gt(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, b > c);
   return 1;
 }
 
-int jmp(uint16_t a, uint16_t b, uint16_t c) {
+static int jmp(uint16_t a, uint16_t b, uint16_t c) {
   pc = a;
   return 0;
 }
 
-int jt(uint16_t a, uint16_t b, uint16_t c) {
+static int jt(uint16_t a, uint16_t b, uint16_t c) {
   if (a) {
     pc = b;
     return 0;
@@ -86,7 +136,7 @@ int jt(uint16_t a, uint16_t b, uint16_t c) {
   }
 }
 
-int jf(uint16_t a, uint16_t b, uint16_t c) {
+static int jf(uint16_t a, uint16_t b, uint16_t c) {
   if (!a) {
     pc = b;
     return 0;
@@ -95,64 +145,65 @@ int jf(uint16_t a, uint16_t b, uint16_t c) {
   }
 }
 
-int add(uint16_t a, uint16_t b, uint16_t c) {
+static int add(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b + c) % 32768);
   return 1;
 }
 
-int mult(uint16_t a, uint16_t b, uint16_t c) {
+static int mult(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b * c) % 32768);
   return 1;
 }
 
-int mod(uint16_t a, uint16_t b, uint16_t c) {
+static int mod(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b % c));
   return 1;
 }
 
-int and(uint16_t a, uint16_t b, uint16_t c) {
+static int and(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b & c));
   return 1;
 }
 
-int or(uint16_t a, uint16_t b, uint16_t c) {
+static int or(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, (b | c));
   return 1;
 }
 
-int not(uint16_t a, uint16_t b, uint16_t c) {
+static int not(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, b^0x7FFF);
   return 1;
 }
 
-int rmem(uint16_t a, uint16_t b, uint16_t c) {
+static int rmem(uint16_t a, uint16_t b, uint16_t c) {
   SET_REG(pc + 1, mem[b]);
   return 1;
 }
 
-int wmem(uint16_t a, uint16_t b, uint16_t c) {
+static int wmem(uint16_t a, uint16_t b, uint16_t c) {
   mem[a] = b;
   return 1;
 }
 
-int call(uint16_t a, uint16_t b, uint16_t c) {
+static int call(uint16_t a, uint16_t b, uint16_t c) {
   *sp++ = pc + 2;
   pc = a;
   return 0;
 }
 
-int ret(uint16_t a, uint16_t b, uint16_t c) {
+static int ret(uint16_t a, uint16_t b, uint16_t c) {
   if (sp == stack) halt(a, b, c);
   sp--;
   pc = *sp;
   return 0;
 }
 
-int out(uint16_t a, uint16_t b, uint16_t c) {
+static int out(uint16_t a, uint16_t b, uint16_t c) {
   putchr(a);
   return 1;
 }
-int in(uint16_t a, uint16_t b, uint16_t c) {
+
+static int in(uint16_t a, uint16_t b, uint16_t c) {
   char ch = getchr();
 
   if (ch == 255) {
@@ -163,13 +214,12 @@ int in(uint16_t a, uint16_t b, uint16_t c) {
   }
 }
 
-int noop(uint16_t a, uint16_t b, uint16_t c) {
+static int noop(uint16_t a, uint16_t b, uint16_t c) {
   return 1;
 }
 
 // run the program loaded in memory
 int run() {
-  reg[7] = 6486;
   while(1) {
     uint16_t opcode = mem[pc];
 
